@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # History files
 .Rhistory
 .Rapp.history
@@ -47,3 +48,23 @@ po/*~
 
 # RStudio Connect folder
 rsconnect/
+=======
+# R / RStudio
+.Rhistory
+.RData
+.Rproj.user/
+
+# Ignore data
+data/
+
+# Cache files
+*.cache/
+rosm.cache/
+
+# Notebook + temp outputs
+*.nb.html
+
+# OS
+.DS_Store
+Thumbs.db
+>>>>>>> 8d1efb7 (All files updated)

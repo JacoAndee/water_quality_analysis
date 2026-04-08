@@ -1,0 +1,167 @@
+---
+title: "Bayesian Regression - Water Quality Samples"
+output:
+  html_document:
+    df_print: paged
+---
+
+**Author: Jacob Anderson**
+
+```{r Load necessary packages}
+
+### Load packages
+### Check ArcGIS Pro license
+
+library(arcgisbinding)
+library(brms)
+library(dplyr)
+library(ggplot2)
+library(ggspatial)
+library(sf)
+arc.check_product()
+```
+
+```{r Read the EPA Water Quality Indicators File and Set Detection Limit}
+
+### Check the current directory
+
+getwd()
+
+### Read the csv and store as data frame
+
+df_rec <- read.csv(
+  "C:/Users/ja090/Desktop/Files/JHU/SU25_STATS/Water_Quality/water_quality_analysis/Data/RFEOutput2_v22_RRecs_20240301145200.csv")
+
+### Inspect the structure of the data frame
+
+head(df_rec)
+
+### Detection Limit for Enterococcus in water samples
+### CFU per 100 mL
+
+DL <- 10
+```
+
+```{r Subset the Data}
+
+### Subset the Data for the Enterococcus pollutant, at least 1 rejected samples, and for June 2023
+
+df_subset <- subset(df_rec, Pollutant == "Enterococcus" & Rejected > 0 & YYYYMM == 202306)
+```
+
+```{r Check the size of your subset data frame}
+
+### Use the dim function to retrieve the dimensions of the data frame subset
+
+dim(df_subset)
+
+### Dimensions: 1627 by 15
+```
+
+```{r Read the Station Location ID file}
+
+### Read the csv and store as data frame
+
+df_locs <- read.csv(
+  "C:/Users/ja090/Desktop/Files/JHU/SU25_STATS/Quantitative_Assignment06/Files/RFEOutput2_v24_MonLocIdInfo_20240301145200.csv")
+
+### Inspect the structure of the data frame
+
+head(df_locs)
+```
+
+```{r Inner Join Two Dataframes (20 points)}
+
+### Inner join the two tables with matching field (Monitoring Location ID)
+
+df_subset_w_locs <- inner_join(
+  df_subset,
+  df_locs,
+  by = "MonitoringLocationIdentifier"
+)
+
+### Inspect the structure of the data frame
+
+head(df_subset_w_locs)
+```
+
+```{r Map the WQI Data}
+
+### Convert the data frame into an sf data frame
+
+sf_df <-st_as_sf(
+  df_subset_w_locs,
+  coords = c("LongitudeMeasure", "LatitudeMeasure"),
+  crs = 4326
+)
+
+### Convert data frame to web mercator
+
+sf_df_3857 <- st_transform(sf_df, 3857)
+
+### Make a GGPLOT map of the sf data frame
+
+ggplot() +
+  annotation_map_tile(type = "osm") +
+  geom_sf(
+    data = sf_df_3857,
+    color = "deeppink",
+    size = 1
+  ) +
+  coord_sf(crs = 3857, expand = T) +
+  labs(
+    title = "Enterococcus Samples (Rejected)",
+    x = NULL,
+    y = NULL
+  ) +
+  theme_minimal()
+
+```
+
+
+```{r Define Data for the Bayesian Censoring}
+
+### Observed data: detected values remain; censored values set to DL
+
+df_subset["Censored Conc."] <- ifelse(df_subset$Maximum<DL, DL, df_subset$Maximum)
+
+df_subset["Flag"] <- ifelse(df_subset$Maximum<DL, "left", "none")
+
+df_subset["DetectionLimit"] <- DL
+```
+
+```{r Perform Data Censoring Using Stan}
+
+### brms formula: | cens(Censored, DetectionLimit) ~ 1 means intercept-only model
+
+fit <- brm(
+  bf(Maximum | cens(Flag, DetectionLimit) ~ 1),
+  data = df_subset,
+  family = gaussian(),
+  chains = 2, 
+  iter = 2000,
+  seed = 10
+)
+
+summary(fit)
+```
+
+
+```{r Visualizing the posterior}
+
+### Convert brms fit to data frame
+
+fit_df <- as_draws_df(fit)
+
+### Plot the posterior probability distribution
+
+ggplot(fit_df, aes(x = b_Intercept)) +
+  geom_density(fill = "deeppink", alpha = 0.5) +
+  labs(
+    title = "Posterior Distribution of the Intercept",
+    x = "Mean Enterococcus Concentration",
+    y = "Density")
+
+```
+
+Using Bayesian censored regression with the brms package, we estimated the mean distribution of Enterococcus samples while accounting for left-censored values below the detection limit. The posterior distribution provides a full representation of uncertainty around this estimate, which would not be captured by a standard regression that ignores censoring.
