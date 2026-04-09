@@ -1,8 +1,6 @@
 ---
 title: "Bayesian Regression - Water Quality Samples"
-output: 
-  html_document: default
-  md_document: default
+output: md_document
 ---
 
 **Author: Jacob Anderson**
