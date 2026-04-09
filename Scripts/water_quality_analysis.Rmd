@@ -3,7 +3,11 @@ title: "Bayesian Regression - Water Quality Samples"
 output: md_document
 ---
 
+# Bayesian Regression - Water Quality Samples
+
 **Author: Jacob Anderson**
+
+### Load necessary packages
 
 ```{r Load necessary packages}
 
@@ -18,6 +22,8 @@ library(ggspatial)
 library(sf)
 arc.check_product()
 ```
+
+### Read the EPA Water Quality Indicators File and Set Detection Limit
 
 ```{r Read the EPA Water Quality Indicators File and Set Detection Limit}
 
@@ -40,12 +46,16 @@ head(df_rec)
 DL <- 10
 ```
 
+### Subset the Data
+
 ```{r Subset the Data}
 
 ### Subset the Data for the Enterococcus pollutant, at least 1 rejected samples, and for June 2023
 
 df_subset <- subset(df_rec, Pollutant == "Enterococcus" & Rejected > 0 & YYYYMM == 202306)
 ```
+
+### Examine the sizer of the subset
 
 ```{r Check the size of your subset data frame}
 
@@ -55,6 +65,8 @@ dim(df_subset)
 
 ### Dimensions: 1627 by 15
 ```
+
+### Read the Station Location ID file
 
 ```{r Read the Station Location ID file}
 
@@ -67,6 +79,8 @@ df_locs <- read.csv(
 
 head(df_locs)
 ```
+
+### Apply inner join to the data tables
 
 ```{r Inner Join Two Dataframes (20 points)}
 
@@ -82,6 +96,8 @@ df_subset_w_locs <- inner_join(
 
 head(df_subset_w_locs)
 ```
+
+### Create a map plot of the rejected samples
 
 ```{r Map the WQI Data}
 
@@ -116,6 +132,7 @@ ggplot() +
 
 ```
 
+### Define the data for censoring
 
 ```{r Define Data for the Bayesian Censoring}
 
@@ -127,6 +144,9 @@ df_subset["Flag"] <- ifelse(df_subset$Maximum<DL, "left", "none")
 
 df_subset["DetectionLimit"] <- DL
 ```
+
+### Set up Bayesian Regression formula
+### brms formula: | cens(Censored, DetectionLimit) ~ 1 means intercept-only model
 
 ```{r Perform Data Censoring Using Stan}
 
@@ -144,6 +164,7 @@ fit <- brm(
 summary(fit)
 ```
 
+### Visualizing the posterior
 
 ```{r Visualizing the posterior}
 

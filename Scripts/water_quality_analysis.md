@@ -1,4 +1,8 @@
+# Bayesian Regression - Water Quality Samples
+
 **Author: Jacob Anderson**
+
+### Load necessary packages
 
     ### Load packages
     ### Check ArcGIS Pro license
@@ -59,6 +63,8 @@
     ## license: Advanced
     ## version: 1.0.1.311
 
+### Read the EPA Water Quality Indicators File and Set Detection Limit
+
     ### Check the current directory
 
     getwd()
@@ -94,9 +100,13 @@
 
     DL <- 10
 
+### Subset the Data
+
     ### Subset the Data for the Enterococcus pollutant, at least 1 rejected samples, and for June 2023
 
     df_subset <- subset(df_rec, Pollutant == "Enterococcus" & Rejected > 0 & YYYYMM == 202306)
+
+### Examine the sizer of the subset
 
     ### Use the dim function to retrieve the dimensions of the data frame subset
 
@@ -105,6 +115,8 @@
     ## [1] 1627   15
 
     ### Dimensions: 1627 by 15
+
+### Read the Station Location ID file
 
     ### Read the csv and store as data frame
 
@@ -143,6 +155,8 @@
     ## 4                 XIV
     ## 5                 XIV
     ## 6                 XIV
+
+### Apply inner join to the data tables
 
     ### Inner join the two tables with matching field (Monitoring Location ID)
 
@@ -199,6 +213,8 @@
     ## 5                 XIV
     ## 6                 XIV
 
+### Create a map plot of the rejected samples
+
     ### Convert the data frame into an sf data frame
 
     sf_df <-st_as_sf(
@@ -232,6 +248,8 @@
 
 ![](water_quality_analysis_files/figure-markdown_strict/Map%20the%20WQI%20Data-1.png)
 
+### Define the data for censoring
+
     ### Observed data: detected values remain; censored values set to DL
 
     df_subset["Censored Conc."] <- ifelse(df_subset$Maximum<DL, DL, df_subset$Maximum)
@@ -239,6 +257,10 @@
     df_subset["Flag"] <- ifelse(df_subset$Maximum<DL, "left", "none")
 
     df_subset["DetectionLimit"] <- DL
+
+### Set up Bayesian Regression formula
+
+### brms formula: | cens(Censored, DetectionLimit) ~ 1 means intercept-only model
 
     ### brms formula: | cens(Censored, DetectionLimit) ~ 1 means intercept-only model
 
@@ -258,8 +280,8 @@
     ## 
     ## SAMPLING FOR MODEL 'anon_model' NOW (CHAIN 1).
     ## Chain 1: 
-    ## Chain 1: Gradient evaluation took 0.000537 seconds
-    ## Chain 1: 1000 transitions using 10 leapfrog steps per transition would take 5.37 seconds.
+    ## Chain 1: Gradient evaluation took 0.000541 seconds
+    ## Chain 1: 1000 transitions using 10 leapfrog steps per transition would take 5.41 seconds.
     ## Chain 1: Adjust your expectations accordingly!
     ## Chain 1: 
     ## Chain 1: 
@@ -276,15 +298,15 @@
     ## Chain 1: Iteration: 1800 / 2000 [ 90%]  (Sampling)
     ## Chain 1: Iteration: 2000 / 2000 [100%]  (Sampling)
     ## Chain 1: 
-    ## Chain 1:  Elapsed Time: 8.292 seconds (Warm-up)
-    ## Chain 1:                1.101 seconds (Sampling)
-    ## Chain 1:                9.393 seconds (Total)
+    ## Chain 1:  Elapsed Time: 9.529 seconds (Warm-up)
+    ## Chain 1:                2.007 seconds (Sampling)
+    ## Chain 1:                11.536 seconds (Total)
     ## Chain 1: 
     ## 
     ## SAMPLING FOR MODEL 'anon_model' NOW (CHAIN 2).
     ## Chain 2: 
-    ## Chain 2: Gradient evaluation took 0.000234 seconds
-    ## Chain 2: 1000 transitions using 10 leapfrog steps per transition would take 2.34 seconds.
+    ## Chain 2: Gradient evaluation took 0.000403 seconds
+    ## Chain 2: 1000 transitions using 10 leapfrog steps per transition would take 4.03 seconds.
     ## Chain 2: Adjust your expectations accordingly!
     ## Chain 2: 
     ## Chain 2: 
@@ -301,9 +323,9 @@
     ## Chain 2: Iteration: 1800 / 2000 [ 90%]  (Sampling)
     ## Chain 2: Iteration: 2000 / 2000 [100%]  (Sampling)
     ## Chain 2: 
-    ## Chain 2:  Elapsed Time: 5.323 seconds (Warm-up)
-    ## Chain 2:                0.975 seconds (Sampling)
-    ## Chain 2:                6.298 seconds (Total)
+    ## Chain 2:  Elapsed Time: 9.491 seconds (Warm-up)
+    ## Chain 2:                1.749 seconds (Sampling)
+    ## Chain 2:                11.24 seconds (Total)
     ## Chain 2:
 
     summary(fit)
@@ -326,6 +348,8 @@
     ## Draws were sampled using sampling(NUTS). For each parameter, Bulk_ESS
     ## and Tail_ESS are effective sample size measures, and Rhat is the potential
     ## scale reduction factor on split chains (at convergence, Rhat = 1).
+
+### Visualizing the posterior
 
     ### Convert brms fit to data frame
 
